@@ -21,7 +21,7 @@
 #define DEG_MIN     30.0f
 #define DEG_MAX     140.0f
 #define DEG_STEP    2.0f
-#define TICK_MS     500
+#define TICK_MS     30
 
 static uint32_t g_menu = 0;
 static volatile int   g_on = 0;
@@ -110,20 +110,36 @@ static void OnReset(uint32_t menu, uint32_t item, int value,
 /* Entering a session reinstalls the camera hook, so the
  * override is pushed again to survive the transition.
  */
+
 static DWORD WINAPI TickThread(LPVOID p) {
     int wasIn = 0;
+    int wasF6Down = 0;
+
     (void)p;
 
     for (;;) {
         int in = ShIsInGame();
+        int f6Down = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
 
         LearnDefault();
-        if (g_on && in && !wasIn) Push();
+
+        if (g_on && in && !wasIn)
+            Push();
+
+        /* Toggle once per F6 press. */
+        if (f6Down && !wasF6Down) {
+            OnToggle(g_menu, 0, !g_on, NULL);
+        }
+
+        wasF6Down = f6Down;
         wasIn = in;
+
         Sleep(TICK_MS);
     }
+
     return 0;
 }
+
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
     (void)reserved;
